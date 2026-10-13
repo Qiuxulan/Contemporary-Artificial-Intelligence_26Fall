@@ -217,5 +217,4 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Project 1: generated plots (regenerable by running the code)
-loss_*.png
+*report.md
