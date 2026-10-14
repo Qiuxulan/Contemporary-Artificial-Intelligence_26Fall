@@ -1,6 +1,6 @@
-"""文本分类的公共训练组件、四模型基线与超参数扫描。
+"""文本分类的公共训练组件、四模型基线与超参数扫描
 
-示例：python draft_main.py tune --model svm
+示例 python draft_main.py tune --model svm
 """
 
 import argparse
@@ -33,7 +33,7 @@ RESULT_COLUMNS = ('model', 'params', 'accuracy', 'precision', 'recall',
 
 
 def load_data():
-    """返回标注文本、标签和按文件顺序排列的无标签测试文本。"""
+    """返回标注文本、标签和按文件顺序排列的无标签测试文本"""
     train_df = pd.read_csv(ROOT / 'train_data.csv')
     test_df = pd.read_csv(ROOT / 'test_data_unlabeled.csv')
     X_train = train_df['text'].astype(str).tolist()
@@ -49,7 +49,7 @@ def split_data(seed=SEED):
 
 
 def vectorize(X_tr, X_val, **kwargs):
-    """先划分，再仅用训练子集拟合词表和 IDF。"""
+    """先划分，再仅用训练子集拟合词表和IDF"""
     vec = TfidfVectorizer(**kwargs)
     X_tr_t = vec.fit_transform(X_tr)
     return vec, X_tr_t, vec.transform(X_val)
@@ -64,7 +64,7 @@ MODEL_CLASSES = {
 
 
 def baseline_params(seed=SEED):
-    """PDF 给出的四个基础模型。"""
+    """四个基础模型"""
     return {
         'nb': {},
         'lr': {'max_iter': 1000, 'random_state': seed},
@@ -75,7 +75,7 @@ def baseline_params(seed=SEED):
 
 
 def selected_params(seed=SEED):
-    """基础扫描选出的固定参数，用于控制文本表示比较中的模型条件。"""
+    """基础扫描选出的固定参数，用于控制文本表示比较中的模型条件"""
     return {
         'nb': {},
         'lr': {'C': 100, 'max_iter': 1000, 'random_state': seed},
@@ -87,7 +87,7 @@ def selected_params(seed=SEED):
 
 
 def tuning_grids(seed=SEED):
-    """LR 8 组、SVM 25 组、MLP 16 组超参数组合。"""
+    """LR 8 组、SVM 25 组、MLP 16 组超参数组合"""
     lr = [{'C': c, 'max_iter': steps, 'random_state': seed}
           for c in [0.1, 1, 10, 100] for steps in [1000, 2000]]
     svm = [{'kernel': 'linear', 'C': c, 'random_state': seed}
@@ -108,7 +108,7 @@ def make_model(name, params):
 
 
 def result_row(exp, tfidf, name, params, model, X_tr_t, y_tr, X_val_t, y_val):
-    """统一记录验证指标；训练 F1 只用于分析拟合差距。"""
+    """统一记录验证指标，训练 F1 只用于分析拟合差距"""
     pred = model.predict(X_val_t)
     p, r, f1, _ = precision_recall_fscore_support(
         y_val, pred, average='macro', zero_division=0)
@@ -122,14 +122,14 @@ def result_row(exp, tfidf, name, params, model, X_tr_t, y_tr, X_val_t, y_val):
 
 
 def record_key(row):
-    """用完整配置去重，保留同一模型的不同参数扫描记录。"""
+    """用完整配置去重，保留同一模型的不同参数扫描记录"""
     params = ast.literal_eval(row['params'])
     return (row['exp'], row['tfidf'], row['model'],
             repr(sorted(params.items())))
 
 
 def save_result(row):
-    """按完整配置写入结果；重复运行同一配置时更新其指标。"""
+    """按完整配置写入结果；重复运行同一配置时更新其指标"""
     key = record_key(row)
     rows = []
     if SWEEP_CSV.exists():
@@ -155,7 +155,7 @@ def save_result(row):
 
 
 def save_predictions(new_columns):
-    """原子保存预测，按传入的模型列更新。"""
+    """原子保存预测，按传入的模型列更新"""
     new = pd.DataFrame(new_columns)
     if PREDICTIONS_CSV.exists():
         old = pd.read_csv(PREDICTIONS_CSV)

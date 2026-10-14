@@ -1,18 +1,16 @@
 # 实验一：基于 TF-IDF 的新闻文本分类
 
-本项目比较朴素贝叶斯、逻辑回归、线性与 RBF SVM、多层感知机，以及使用 SGD 训练的逻辑回归和线性 SVM。实验依次考察模型超参数、文本处理、特征预算、参数平均、随机划分稳定性和逐批训练损失，最后使用各模型的验证最优配置导出无标签测试集预测。
+本实验通过探索基于 TF-IDF 的新闻文本分类，比较朴素贝叶斯、逻辑回归、线性+RBF SVM、多层感知机，以及使用 SGD 训练的逻辑回归和线性 SVM。实验依次考察模型超参数、文本处理、特征预算、参数平均、随机划分稳定性和逐批训练损失，最后使用各模型的验证最优配置导出无标签测试集预测。
 
 ## 1. 环境安装
 
-实验使用 Python 3.10，在 CPU 上运行，不需要 CUDA。推荐使用独立的 Conda 环境：
+实验使用 Python 3.10 以及独立的 Conda 环境。
 
 ```bash
 conda create -n project1 python=3.10 -y
 conda activate project1
 python -m pip install numpy==2.2.5 pandas==2.3.3 scipy==1.15.3 scikit-learn==1.7.2 nltk==3.10.3 matplotlib==3.10.9
 ```
-
-已有环境时直接执行 `conda activate project1`。PorterStemmer 不需要下载 NLTK 语料。绘图使用 Matplotlib 的 `Agg` 后端，无需图形界面。
 
 为减少不同线程设置造成的浮点差异，可在运行前设置：
 
@@ -21,7 +19,7 @@ export OPENBLAS_NUM_THREADS=1
 export OMP_NUM_THREADS=1
 ```
 
-MLP 的逐批损失通过覆写 `MLPClassifier._backprop` 记录，实际计算仍由父类完成。该方法属于 scikit-learn 内部接口，因此复现实验时应使用上述版本。
+MLP 的逐批损失通过覆写 `MLPClassifier._backprop` 记录，实际计算仍由父类完成。
 
 ## 2. 项目文件与代码结构
 
@@ -34,18 +32,18 @@ Project1/
 ├── sweep_results.csv        # 完整精度的配置与验证指标
 ├── results.md               # 按实验组展示的结果表
 ├── report.md                # 实验报告
-├── predictions.csv         # 六模型的测试集预测
+├── predictions.csv          # 六模型最优配置的测试集预测
 ├── figures/
-│   ├── loss_comparison.png  # 一行三图，400 dpi
-│   ├── loss_comparison.pdf  # 矢量损失图
+│   ├── loss_comparison.png  # 三模型损失图
+│   ├── loss_comparison.pdf  # 三模型损失图
 │   └── loss_curves.csv      # 逐 mini-batch 损失记录
 ├── TUNING.md                # 课程提供的参数说明
-└── 实验一要求.pdf           # 实验要求与评分标准
+└── 实验一要求.pdf            # 实验要求与评分标准
 ```
 
-两份 Python 文件的职责如下：
+两份 Python 文件的功能如下：
 
-| 文件 | 主要职责 |
+| 文件 | 主要功能 |
 | --- | --- |
 | `draft_main.py` | 加载数据；分层划分；训练集拟合 TF-IDF；构建 NB、LR、SVC、MLP；计算验证与训练指标；保存实验结果和预测；运行基础模型参数扫描 |
 | `explore.py` | 定义文本处理；执行 SGD 训练循环；记录 MLP 批次损失；运行特征和随机划分对照；选择六模型最优配置并全量重训；提供完整实验入口 |
@@ -57,7 +55,7 @@ Project1/
 - 标注样本 7368 条，类别标签为 0–9；测试样本 2457 条。
 - 默认 `random_state=42`，按类别分层作 80%/20% 划分，得到训练集 5894 条、验证集 1474 条。
 - 先划分再拟合 TF-IDF；验证文本只调用 `transform`。每个随机划分各自拟合词表和 IDF。
-- TF-IDF 默认使用单词、最多 5000 个特征、L2 归一化。所有文本均转小写。
+- TF-IDF 默认使用单词、基础实验最多 5000 个特征、L2 归一化。所有文本均转小写。
 - 以验证集 Macro-F1 选择配置，同时记录 Accuracy、Macro-P、Macro-R、Train F1 与 F1 gap。
 - 无标签测试集不参与调参。最终预测时，才使用全部标注样本拟合对应 TF-IDF 和模型。
 
@@ -73,7 +71,7 @@ Project1/
 | `tfidf` | 文本处理与特征预算标识 |
 | `exp` | `tuning`、`tfidf`、`header_control`、`feature_budget`、`seed_check` 或 `loss_figure`；可选基础基线为 `baseline` |
 
-每次运行都会训练所选配置并写入本次指标。相同的实验、文本表示、模型和参数对应同一条记录，重复运行会更新该记录，不重复追加。写入使用临时文件与原子替换，避免留下写入不完整的 CSV。
+每次运行都会训练所选配置并写入本次指标。相同的实验、文本表示、模型和参数对应同一条记录，重复运行会更新该记录，不重复追加。
 
 ## 4. 完整实验运行
 
@@ -96,9 +94,9 @@ python explore.py all
 | LR-SGD、SVM-SGD、MLP 的逐批损失 | 3 | 第 20 节 |
 | 六模型最优配置全量训练与测试集预测 | 不计入验证结果 | `predictions.csv` |
 
-默认实验共 145 条验证记录。损失图的三条记录用于关联曲线与评估指标，不应作为独立的新配置证据。完整运行涉及多组 SVC 和 MLP 训练，耗时取决于 CPU 与线程设置。
+默认实验共 145 条验证记录。
 
-## 5. 分别运行各实验
+## 5. 单独运行各实验
 
 ### 5.1 基础模型与参数扫描
 
@@ -120,14 +118,14 @@ python draft_main.py tune --model mlp
 
 MLP 固定 ReLU、Adam、max_iter=300。基础扫描会打印各模型最优结果、分类报告和混淆矩阵。
 
-如需单独运行指导书的四模型基线：
+如需单独运行四模型基线：
 
 ```bash
 python draft_main.py baseline
 python draft_main.py baseline --model nb
 ```
 
-基线使用 NB 默认参数、LR 默认 C 且 max_iter=1000、线性 SVC 的 C=1、MLP 的隐藏层 (100,)；其 `baseline` 记录不计入上面的 145 条默认实验。
+基线使用 NB 默认参数、LR 默认 C 且 max_iter=1000、线性 SVC 的 C=1、MLP 的隐藏层 (100,)。
 
 ### 5.2 文本处理对照
 
@@ -177,7 +175,7 @@ python explore.py seed-check
 
 `feature-budget` 固定 RBF SVM 的 C=1000、gamma=scale，比较单词、单词＋二元词组、词干化单词的 20000 维表示。
 
-`seed-check` 使用分层划分 seed 0–4。每个划分中，SVM 与 MLP 共享同一套 5000 维词干化 TF-IDF；模型超参数固定为基础参数扫描选出的组合，模型随机种子与划分 seed 相同。输出五次验证 F1 的均值和样本标准差。该实验比较固定配置的稳定性，并未在每个划分上重新调参。
+`seed-check` 使用分层划分 seed 0–4。每个划分中，SVM 与 MLP 共享同一套 5000 维词干化 TF-IDF；模型超参数固定为基础参数扫描选出的组合，模型随机种子与划分 seed 相同。输出五次验证 F1 的均值和样本标准差。
 
 ### 5.5 损失曲线
 
@@ -193,17 +191,11 @@ python explore.py loss-figure
 python explore.py loss-figure --plot-only
 ```
 
-指定图片路径：
-
-```bash
-python explore.py loss-figure --output figures/loss_comparison.png
-```
-
 绘图统一使用原始文本、5000 维 TF-IDF、默认分层划分。LR-SGD 的 α=1e−5，SVM-SGD 的 α=1e−4，均 average=True；MLP 使用 (100,)、α=0.001 和 Adam。前两者为 100 epoch、每 epoch 46 批，共各 4600 点；当前 MLP 在 165 epoch 停止，每 epoch 30 批，共 4950 点。
 
-SGD 在每批更新后计算当前批次的 one-vs-rest 损失与 L2 项；MLP 记录反向传播时计算的批次损失。图中保留原始波动，并以一个 epoch 的批次数作为移动平均窗口。不同模型的损失定义、记录时点和批次大小不同，应比较各自收敛趋势，不按损失绝对值评价模型优劣。
+SGD 在每批更新后计算当前批次的 one-vs-rest 损失与 L2 项；MLP 记录反向传播时计算的批次损失。图中保留原始波动，并以一个 epoch 的批次数作为移动平均窗口。不同模型的损失定义、记录时点和批次大小不同，因此只比较各自收敛趋势，不按损失绝对值评价模型优劣。
 
-曲线 CSV 包括 `model`、`tfidf`、`params`、`step`、`epoch`、`train_loss`、`loss_scope`。`step` 是批次更新计数，`epoch` 可为小数。PNG 为一行三图、400 dpi，同时输出矢量 PDF。
+曲线 CSV 包括 `model`、`tfidf`、`params`、`step`、`epoch`、`train_loss`、`loss_scope`。`step` 是批次更新计数，`epoch` 可为小数。
 
 ## 6. 最优配置与最终预测
 
@@ -211,7 +203,7 @@ SGD 在每批更新后计算当前批次的 one-vs-rest 损失与 L2 项；MLP �
 python explore.py predict-final
 ```
 
-默认处理全部六个模型：从 `sweep_results.csv` 中按验证集 Macro-F1 选择配置，排除 `seed_check` 与 `loss_figure`，避免用其他划分的结果选模或重复计入绘图评估。随后按各自最优文本处理和参数，在全部 7368 条标注样本上重新拟合 TF-IDF 和分类器，再预测测试集。
+默认处理全部六个模型：从 `sweep_results.csv` 中按验证集 Macro-F1 选择配置，排除 `seed_check` 与 `loss_figure`。按各自最优文本处理和参数，在全部 7368 条标注样本上重新拟合 TF-IDF 和分类器，再预测测试集。
 
 当前选定配置为：
 
@@ -224,22 +216,16 @@ python explore.py predict-final
 | `lr_sgd` | stop，5000 维 | log_loss，α=1e−5，average=True | 0.91957 |
 | `svm_sgd` | base，5000 维 | hinge，α=1e−4，average=True | 0.91794 |
 
-所有最终模型的随机种子为 42。这里的“最优”指已完成实验中的验证最优，并不表示全部可能参数空间的全局最优。
-
-也可仅训练并更新指定模型列：
+所有最终模型的随机种子为 42。也可仅训练并更新指定模型列：
 
 ```bash
 python explore.py predict-final --model svm
 ```
 
-`predictions.csv` 不含索引，列顺序为 `nb,lr,svm,mlp,lr_sgd,svm_sgd`，共 2457 行，顺序与 `test_data_unlabeled.csv` 一致，值为 0–9 的类别标签。命令会检查输出行数与标签范围；已有预测文件时，还会打印各列与本次预测相比变化的条数。
-
-损失图使用统一输入做收敛比较，而最终预测使用各模型分别选定的最佳输入，两者的用途不同。
+`predictions.csv` 不含索引，列顺序为 `nb,lr,svm,mlp,lr_sgd,svm_sgd`，共 2457 行，顺序与 `test_data_unlabeled.csv` 一致，值为 0–9 的类别标签。
 
 ## 7. 结果与复现注意事项
 
 - `sweep_results.csv` 保留完整精度；`results.md` 展示五位小数，按表格各指标的最优值加粗，并列最优一起标出；F1 gap 按最小值标注，但不能单独用它选模。
-- 训练过程中产生的结果由命令写入 CSV；Markdown 报告和结果表是实验结果的展示文档。
 - 同一数据、参数、随机种子与依赖版本下应得到相同结果。不同数值库或线程设置可能使浮点计算、收敛停止点出现细微差异。
 - 运行最优配置迁移与最终预测前，需要先获得相应验证记录；`python explore.py all` 按依赖关系依次执行。
-- 若 Matplotlib 提示默认缓存目录不可写，可设置 `export MPLCONFIGDIR=/tmp/project1-matplotlib` 后运行绘图。

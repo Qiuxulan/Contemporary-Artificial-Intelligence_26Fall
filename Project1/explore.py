@@ -1,4 +1,4 @@
-"""扩展实验：文本处理、SGD 优化、稳定性检查和损失曲线。
+"""扩展实验：文本处理、SGD 优化、稳定性检查和损失曲线
 
 示例：python explore.py all
 """
@@ -27,7 +27,7 @@ TOKEN_RE = re.compile(r'(?u)\b\w\w+\b')
 
 
 def strip_headers_lower(text):
-    """自定义预处理会绕过默认 lowercase，因此在这里显式转小写。"""
+    """自定义预处理会绕过默认 lowercase，因此在这里显式转小写"""
     return text.split('\n\n', 1)[-1].lower()
 
 
@@ -38,7 +38,7 @@ def porter_stemmer():
 
 
 def stem_tokenizer(text):
-    """对默认规则识别出的单词进行 Porter 词干化。"""
+    """对默认规则识别出的单词进行 Porter 词干化"""
     stemmer = porter_stemmer()
     return [stemmer.stem(token) for token in TOKEN_RE.findall(text)]
 
@@ -60,7 +60,7 @@ def sgd_params(name, alpha, average, seed=SEED):
 
 
 def selected_sgd_params(seed=SEED):
-    """原始 TF-IDF 参数比较选出的两组 SGD 配置。"""
+    """原始 TF-IDF 参数比较选出的两组 SGD 配置"""
     return {
         'lr_sgd': sgd_params('lr_sgd', 1e-5, True, seed),
         'svm_sgd': sgd_params('svm_sgd', 1e-4, True, seed),
@@ -68,7 +68,7 @@ def selected_sgd_params(seed=SEED):
 
 
 def sgd_objective(model, X, y):
-    """多分类 one-vs-rest 的训练目标；用于同一模型内观察收敛。"""
+    """多分类 one-vs-rest 的训练目标，用于同一模型内观察收敛"""
     scores = model.decision_function(X)
     positive = (y[:, None] == model.classes_[None, :])
     signed = np.where(positive, 1.0, -1.0) * scores
@@ -80,7 +80,7 @@ def sgd_objective(model, X, y):
 
 
 def train_sgd(model, X, y, seed=SEED, collect_loss=False):
-    """训练 100 epoch；每轮打乱，使用 128 条完整批次并丢弃尾部。"""
+    """训练 100 epoch；每轮打乱，使用 128 条完整批次并丢弃尾部"""
     rng = np.random.RandomState(seed)
     classes = np.unique(y)
     curve = []
@@ -97,7 +97,7 @@ def train_sgd(model, X, y, seed=SEED, collect_loss=False):
 
 
 class BatchLossMLPClassifier(MLPClassifier):
-    """记录 Adam 每个批次反向传播时的真实损失，保持 fit 的更新与停止规则。"""
+    """记录 Adam 每个批次反向传播时的真实损失，保持 fit 的更新与停止规则"""
 
     def _backprop(self, *args, **kwargs):
         result = super()._backprop(*args, **kwargs)
@@ -110,14 +110,14 @@ class BatchLossMLPClassifier(MLPClassifier):
 
 
 def tfidf_config(name):
-    """返回文本表示配置，_20k 表示最多保留 20000 个特征。"""
+    """返回文本表示配置，_20k 表示最多保留 20000 个特征"""
     if name.endswith('_20k'):
         return dict(TFIDF_CONFIGS[name[:-4]], max_features=20000)
     return dict(TFIDF_CONFIGS[name])
 
 
 def run_cleaning(args):
-    """固定模型参数，比较五种文本处理。"""
+    """固定模型参数，比较五种文本处理"""
     selected = selected_params()
     names = MODELS if args.model == 'all' else (args.model,)
     X_tr, X_val, y_tr, y_val = split_data()
@@ -136,7 +136,7 @@ def run_cleaning(args):
 
 
 def sgd_configs(tfidf, names=SGD_MODELS, top_k=None, focused=False):
-    """默认：原始文本 8 组，词组和停用词各 20 组，邮件头和词干化各 6 组。"""
+    """默认：原始文本 8 组，词组和停用词各 20 组，邮件头和词干化各 6 组"""
     if top_k is None and tfidf in ('nohdr_fixed', 'stem'):
         top_k = 3
     if top_k is not None:
@@ -183,7 +183,7 @@ def run_sgd_group(tfidf, configs):
 
 
 def run_feature_budget(args):
-    """在相同模型参数下比较三种 20000 维文本表示。"""
+    """在相同模型参数下比较三种 20000 维文本表示"""
     X_tr, X_val, y_tr, y_val = split_data()
     params = selected_params()['svm']
     for tfidf in ('base_20k', 'ngram12_20k', 'stem_20k'):
@@ -197,7 +197,7 @@ def run_feature_budget(args):
 
 
 def run_seed_check(args):
-    """两个模型共享词干化 TF-IDF，在五个相同划分上配对比较。"""
+    """两个模型共享词干化 TF-IDF，在五个相同划分上配对比较"""
     scores = {name: [] for name in ('svm', 'mlp')}
     for seed in (0, 1, 2, 3, 4):
         X_tr, X_val, y_tr, y_val = split_data(seed)
@@ -218,7 +218,7 @@ def run_seed_check(args):
 
 
 def run_loss_figure(args):
-    """绘制 LR-SGD、线性 SVM-SGD、MLP 的训练损失曲线。"""
+    """绘制 LR-SGD、线性 SVM-SGD、MLP 的训练损失曲线"""
 
     output = Path(args.output).resolve() if args.output else ROOT / 'figures' / 'loss_comparison.png'
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -256,11 +256,9 @@ def run_loss_figure(args):
     save_loss_plot(curves, output)
     pd.DataFrame(records).to_csv(output.with_name('loss_curves.csv'), index=False)
     print(f'已保存 {output}、{output.with_suffix(".pdf")} 和 loss_curves.csv')
-    print('三个模型的损失定义不同，应比较各自收敛趋势，不比较纵轴绝对值。')
-
 
 def save_loss_plot(curves, output):
-    """将三条损失曲线横向排版，分别使用各自的纵轴范围。"""
+    """将三条损失曲线横向排版，分别使用各自的纵轴范围"""
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -334,7 +332,7 @@ def load_loss_curves(path):
 
 
 def best_configurations(names):
-    """按默认划分的验证 Macro-F1 选模，排除多 seed 检验和绘图重复评估。"""
+    """按默认划分的验证 Macro-F1 选模，排除多 seed 检验和绘图重复评估"""
     rows = pd.read_csv(ROOT / 'sweep_results.csv')
     candidates = rows[~rows['exp'].isin(['seed_check', 'loss_figure'])]
     best = {}
@@ -347,7 +345,7 @@ def best_configurations(names):
 
 
 def run_predict_final(args):
-    """使用各模型验证最优配置，在全部标注数据上重训并预测测试集。"""
+    """使用各模型验证最优配置，在全部标注数据上重训并预测测试集"""
     names = (*MODELS, *SGD_MODELS) if args.model == 'all' else (args.model,)
     selected = best_configurations(names)
     X_train, y_train, X_test = load_data()
@@ -382,7 +380,7 @@ def run_predict_final(args):
 
 
 def run_all(args):
-    """依次运行参数扫描、特征对照、优化、稳定性、损失曲线与最终预测。"""
+    """依次运行参数扫描、特征对照、优化、稳定性、损失曲线与最终预测"""
     run_basic(argparse.Namespace(stage='tune', model='all'))
     run_cleaning(argparse.Namespace(model='all'))
     run_sgd_sweep(argparse.Namespace(model='all', tfidf='all',
