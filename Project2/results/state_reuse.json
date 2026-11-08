@@ -1,0 +1,8 @@
+{
+  "depth": 4,
+  "visits": 65,
+  "full_state_unique": 65,
+  "future_state_unique": 53,
+  "full_state_duplicates": 0,
+  "future_state_duplicates": 12
+}

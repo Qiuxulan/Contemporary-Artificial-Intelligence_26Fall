@@ -218,3 +218,11 @@ __marimo__/
 .streamlit/secrets.toml
 
 *report*.md
+
+# Local assignment documents, reference reports and backups
+/Project2/docs/
+/report_example/
+/Project2_backup_*.tar.gz
+
+# Keep the final report source available for reproducible PDF export
+!/Project2/report/report.md
